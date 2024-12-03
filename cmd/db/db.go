@@ -91,15 +91,19 @@ func (d *DB) Insert(data interface{}) (bool, error) {
 
 func (d *DB) Update(id int, data interface{}) (bool, error) {
 	dbFile, err := file_handler.OpenFileWithPerm(getDBFilepath(), os.O_RDWR)
+
 	if err != nil {
 		return false, err
 	}
+
 	defer dbFile.Close()
 	dataString := dbutils.ConvertStructToString(data)
 	err = file_handler.UpdateFileEntry(dbFile, strconv.Itoa(id), dataString)
+
 	if err != nil {
 		return false, err
 	}
+
 	return true, nil
 }
 
@@ -134,7 +138,12 @@ func (d *DB) Delete(id int) (bool, error) {
 		return false, err
 	}
 	defer dbFile.Close()
-	file_handler.RemoveFileEntry(dbFile, strconv.Itoa(id))
+	err = file_handler.RemoveFileEntry(dbFile, strconv.Itoa(id))
+
+	if err != nil {
+		return false, err
+	}
+
 	return true, nil
 }
 

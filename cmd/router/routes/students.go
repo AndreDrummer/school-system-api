@@ -16,15 +16,22 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-func handleRequests(w http.ResponseWriter, r *http.Request, student *domain.Student) error {
+func handlePostRequests(w http.ResponseWriter, r *http.Request, student *domain.Student) error {
 	if err := json.NewDecoder(r.Body).Decode(student); err != nil {
-		slog.Error(fmt.Sprintf("Json decoding error: %s", err.Error()))
+		jsonDecondingError := &apperrors.JsonDecodingError{
+			Type: fmt.Sprintf("%T", student),
+			Err:  err,
+		}
+
+		slog.Error(jsonDecondingError.Error())
+
 		httputils.SendResponse(
 			w,
 			httputils.Response{Error: "Invalid request: body malformed"},
 			http.StatusBadRequest,
 		)
-		return fmt.Errorf("invalid Json: %v", err)
+
+		return jsonDecondingError
 	}
 
 	return nil
@@ -98,7 +105,7 @@ var update = func(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	var student domain.Student
-	if err := handleRequests(w, r, &student); err == nil {
+	if err := handlePostRequests(w, r, &student); err == nil {
 		studentID := chi.URLParam(r, "id")
 		studentIDInt, err := strconv.Atoi(studentID)
 
@@ -106,7 +113,7 @@ var update = func(w http.ResponseWriter, r *http.Request) {
 			slog.Error(err.Error())
 			httputils.SendResponse(
 				w,
-				httputils.Response{Error: "Could not update user."},
+				httputils.Response{Error: "Could not update student data."},
 				http.StatusInternalServerError,
 			)
 			return
@@ -121,16 +128,18 @@ var update = func(w http.ResponseWriter, r *http.Request) {
 			if errors.As(err, &notFoundError) {
 				errorMessage := fmt.Sprintf("Student of ID %v was not found.", studentID)
 				slog.Error(errorMessage)
+
 				httputils.SendResponse(
 					w,
 					httputils.Response{Error: errorMessage},
 					http.StatusNotFound,
 				)
+
 			} else {
 				slog.Error(err.Error())
 				httputils.SendResponse(
 					w,
-					httputils.Response{Error: "Could not update user."},
+					httputils.Response{Error: "Could not update student data."},
 					http.StatusInternalServerError,
 				)
 			}
@@ -144,13 +153,75 @@ var update = func(w http.ResponseWriter, r *http.Request) {
 			)
 		}
 	}
-
 }
 
 var create = func(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
 
+	var student domain.Student
+	if err := handlePostRequests(w, r, &student); err == nil {
+		_, err := schoolsystem.AddStudent(&student)
+
+		if err != nil {
+			slog.Error(err.Error())
+			httputils.SendResponse(
+				w,
+				httputils.Response{
+					Error: "Was not possible to add a new student",
+				},
+				http.StatusBadRequest,
+			)
+			return
+		}
+
+		slog.Info("Student Added successfully!")
+	}
 }
 
 var delete = func(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
 
+	studentID := chi.URLParam(r, "id")
+	studentIDInt, err := strconv.Atoi(studentID)
+
+	if err != nil {
+		slog.Error(err.Error())
+		httputils.SendResponse(
+			w,
+			httputils.Response{
+				Error: "Was not possible to delete student.",
+			},
+			http.StatusInternalServerError,
+		)
+		return
+	}
+
+	_, err = schoolsystem.RemoveStudent(studentIDInt)
+
+	if err != nil {
+		notFoundError := &apperrors.NotFoundError{}
+		if errors.As(err, &notFoundError) {
+			slog.Error(err.Error())
+			httputils.SendResponse(
+				w,
+				httputils.Response{
+					Error: fmt.Sprintf("Student of ID %d was not found", studentIDInt),
+				},
+				http.StatusNotFound,
+			)
+		} else {
+			slog.Error(err.Error())
+			httputils.SendResponse(
+				w,
+				httputils.Response{
+					Error: "Was not possible to delete student.",
+				},
+				http.StatusInternalServerError,
+			)
+		}
+
+		return
+	}
+
+	slog.Info("Student deleted successfully!")
 }

@@ -85,20 +85,28 @@ func UpdateFileEntry(file *os.File, entryPrefix, updatedEntry string) error {
 	}
 }
 
-func RemoveFileEntry(file *os.File, entryPrefix any) {
+func RemoveFileEntry(file *os.File, entryPrefix any) error {
 	fileContent := GetFileContent(file)
 	var newContent []string
+	var found bool
 
 	for _, v := range fileContent {
 		vPrefix := strings.Split(v, " ")[0]
 		if vPrefix == entryPrefix || v == "" {
+			found = true
 			continue
 		} else {
 			newContent = append(newContent, v)
 		}
 	}
 
-	OverrideFileContent(file, newContent)
+	if found {
+		OverrideFileContent(file, newContent)
+		return nil
+	} else {
+		return &apperrors.NotFoundError{}
+	}
+
 }
 
 func OverrideFileContent(file *os.File, content []string) {
