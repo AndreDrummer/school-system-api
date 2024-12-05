@@ -1,6 +1,8 @@
 package schoolsystem
 
 import (
+	"sort"
+
 	dbutils "github.com/AndreDrummer/school-system-api/cmd/db/utils"
 	"github.com/AndreDrummer/school-system-api/cmd/domain"
 )
@@ -11,11 +13,45 @@ func getClassRoomInstance() *domain.ClassRoom {
 
 var classRoomInstance = getClassRoomInstance()
 
+func getNextAvailableID() (int, error) {
+	studentIDs := make([]int, 0)
+	students, err := AllStudents()
+
+	if err != nil {
+		return 0, err
+	}
+
+	for _, student := range students {
+		studentID := student.ID
+		studentIDs = append(studentIDs, studentID)
+	}
+
+	sort.Ints(studentIDs)
+	startID := 1
+	for _, ID := range studentIDs {
+		if ID-startID == 0 {
+			startID++
+			continue
+		} else {
+			return startID, nil
+		}
+	}
+
+	return len(studentIDs) + 1, nil
+}
+
 func AllStudents() ([]*domain.Student, error) {
 	return classRoomInstance.AllStudents()
 }
 
 func AddStudent(student *domain.Student) (bool, error) {
+	studentID, err := getNextAvailableID()
+
+	if err != nil {
+		return false, err
+	}
+
+	student.ID = studentID
 	return classRoomInstance.AddStudent(student)
 }
 

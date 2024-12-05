@@ -60,6 +60,7 @@ var listAll = func(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	slog.Info("Listing students...")
 	httputils.SendResponse(
 		w,
 		httputils.Response{Data: students},
@@ -94,6 +95,7 @@ var getByID = func(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	slog.Info("Student Found!")
 	httputils.SendResponse(
 		w,
 		httputils.Response{Data: student},
@@ -148,7 +150,7 @@ var update = func(w http.ResponseWriter, r *http.Request) {
 			successMsg := "Student updated successfully."
 			slog.Info(successMsg)
 			httputils.SendResponse(w,
-				httputils.Response{Data: successMsg},
+				httputils.Response{Data: student},
 				http.StatusOK,
 			)
 		}
@@ -175,6 +177,11 @@ var create = func(w http.ResponseWriter, r *http.Request) {
 		}
 
 		slog.Info("Student Added successfully!")
+		httputils.SendResponse(
+			w,
+			httputils.Response{Data: student},
+			http.StatusOK,
+		)
 	}
 }
 
@@ -224,4 +231,9 @@ var delete = func(w http.ResponseWriter, r *http.Request) {
 	}
 
 	slog.Info("Student deleted successfully!")
+	httputils.SendResponse(
+		w,
+		httputils.Response{Data: "Student deleted successfully!"},
+		http.StatusOK,
+	)
 }
